@@ -54,12 +54,15 @@ type lastPercent struct {
 
 var lastCPUPercent lastPercent
 var invoke common.Invoker = common.Invoke{}
+var initCPUPercentOnce = sync.Once{}
 
-func init() {
-	lastCPUPercent.Lock()
-	lastCPUPercent.lastCPUTimes, _ = Times(false)
-	lastCPUPercent.lastPerCPUTimes, _ = Times(true)
-	lastCPUPercent.Unlock()
+func initCPUPercent() {
+	initCPUPercentOnce.Do(func() {
+		lastCPUPercent.Lock()
+		lastCPUPercent.lastCPUTimes, _ = Times(false)
+		lastCPUPercent.lastPerCPUTimes, _ = Times(true)
+		lastCPUPercent.Unlock()
+	})
 }
 
 // Counts returns the number of physical or logical cores in the system
@@ -162,6 +165,8 @@ func PercentWithContext(ctx context.Context, interval time.Duration, percpu bool
 }
 
 func percentUsedFromLastCall(percpu bool) ([]float64, error) {
+	initCPUPercent()
+
 	cpuTimes, err := Times(percpu)
 	if err != nil {
 		return nil, err
